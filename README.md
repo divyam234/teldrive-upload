@@ -9,7 +9,7 @@
 ```shell
 API_URL="http://localhost:8000" # url of hosted app
 SESSION_TOKEN="" #user session token which can be fetched from teldrive app from cookies
-PART_SIZE=1GB # ALLowed sizes 500M,1GB,2GB (1GB is defualt)
+PART_SIZE=1GB # ALLowed sizes 500MB,1GB,2GB (1GB is defualt)
 ```
 - Smaller part size will give max upload speed.
 - Download release binary of teldrive upload from releases section.
