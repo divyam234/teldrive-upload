@@ -371,13 +371,14 @@ func uploadFilesInDirectory(httpClient *rest.Client, sourcePath string, destDir 
 func main() {
     sourcePath := flag.String("path", "", "File or directory path to upload")
     destDir := flag.String("dest", "", "Remote directory for uploaded files")
-    channelID := flag.Int64("channelID", 0, "Telegram channel ID") // Add a new flag for channel ID
-    flag.Parse()
+	channelID := flag.Int64("channelID", 0, "Telegram channel ID") // Use a pointer to int64
 
-    if *sourcePath == "" || *destDir == "" || *channelID == 0 {
-        fmt.Println("Usage: ./uploader -path <file_or_directory_path> -dest <remote_directory> -channelID <telegram_channel_id>")
-        return
-    }
+	flag.Parse()
+	
+	if *sourcePath == "" || *destDir == "" || *channelID == 0 { // Check if channelID is provided
+		fmt.Println("Usage: ./uploader -path <file_or_directory_path> -dest <remote_directory> -channelID <telegram_channel_id>")
+		return
+	}
 
     config, err := loadConfigFromEnv()
 
