@@ -356,10 +356,7 @@ func uploadFilesInDirectory(httpClient *rest.Client, sourcePath string, destDir 
 				return err
 			}
 		} else {
-			err := uploadFile(httpClient, fullPath, strings.ReplaceAll(destDir, "\\", "/"), partSize, numWorkers)
-			if err != nil {
-				return err
-			}
+			uploadFile(httpClient, fullPath, strings.ReplaceAll(destDir, "\\", "/"), partSize, numWorkers)
 		}
 	}
 	return nil
