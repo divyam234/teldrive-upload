@@ -338,7 +338,7 @@ func createRemoteDir(httpClient *rest.Client, path string) error {
 	return nil
 }
 
-func uploadFilesInDirectory(httpClient *rest.Client, sourcePath string, destDir string, partSize int64, numWorkers int) error {
+func uploadFilesInDirectory(httpClient *rest.Client, sourcePath string, destDir string, partSize int64, numWorkers int, channelID int64) error {
 	entries, err := os.ReadDir(sourcePath)
 	if err != nil {
 		return err
