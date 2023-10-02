@@ -356,7 +356,16 @@ func uploadFilesInDirectory(httpClient *rest.Client, sourcePath string, destDir 
 				return err
 			}
 		} else {
-			uploadFile(httpClient, fullPath, strings.ReplaceAll(destDir, "\\", "/"), partSize, numWorkers)
+			err := uploadFile(httpClient, fullPath, strings.ReplaceAll(destDir, "\\", "/"), partSize, numWorkers)
+			if err != nil {
+				channelInvalidError := "CHANNEL_INVALID"
+				fileExistsError := "file exists"
+				if strings.Contains(err.Error(), channelInvalidError) || strings.Contains(err.Error(), fileExistsError) {
+					fmt.Println("Error uploading file: ", err)
+					return nil
+				}
+				return err
+			}
 		}
 	}
 	return nil
