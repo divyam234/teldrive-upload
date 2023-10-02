@@ -51,13 +51,15 @@ type Part struct {
 	PartNo int   `json:"partNo"`
 }
 
+// Add a new field for Telegram channel ID in the FilePayload struct
 type FilePayload struct {
-	Name     string `json:"name"`
-	Type     string `json:"type"`
-	Parts    []Part `json:"parts,omitempty"`
-	MimeType string `json:"mimeType"`
-	Path     string `json:"path"`
-	Size     int64  `json:"size"`
+	Name      string `json:"name"`
+	Type      string `json:"type"`
+	Parts     []Part `json:"parts,omitempty"`
+	MimeType  string `json:"mimeType"`
+	Path      string `json:"path"`
+	Size      int64  `json:"size"`
+	ChannelID int64  `json:"channelId"`
 }
 
 type CreateDirRequest struct {
@@ -132,7 +134,7 @@ func (pr *ProgressReader) Read(p []byte) (n int, err error) {
 	return
 }
 
-func uploadFile(httpClient *rest.Client, filePath string, destDir string, partSize int64, numWorkers int) error {
+func uploadFile(httpClient *rest.Client, filePath string, destDir string, partSize int64, numWorkers int, channelID int64) error {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return err
@@ -276,16 +278,17 @@ func uploadFile(httpClient *rest.Client, filePath string, destDir string, partSi
 	})
 
 	filePayload := FilePayload{
-		Name:     fileName,
-		Type:     "file",
-		Parts:    parts,
-		MimeType: mimeType,
-		Path:     destDir,
-		Size:     fileSize,
+		Name:      fileName,
+		Type:      "file",
+		Parts:     parts,
+		MimeType:  mimeType,
+		Path:      destDir,
+		Size:      fileSize,
+		ChannelID: channelID, // Set the Telegram channel ID
 	}
 
-	json.Marshal(filePayload)
-
+	// Marshal the filePayload to JSON
+	payloadJSON, err := json.Marshal(filePayload)
 	if err != nil {
 		fmt.Println("Error marshaling JSON:", err)
 		return err
@@ -296,7 +299,7 @@ func uploadFile(httpClient *rest.Client, filePath string, destDir string, partSi
 		Path:   "/api/files",
 	}
 
-	resp, err := httpClient.CallJSON(context.TODO(), &opts, &filePayload, nil)
+	resp, err := httpClient.CallJSON(context.TODO(), &opts, payloadJSON, nil)
 
 	if resp.StatusCode != 200 {
 		fmt.Println("Request failed with status code:", resp.StatusCode)
@@ -335,7 +338,7 @@ func createRemoteDir(httpClient *rest.Client, path string) error {
 	return nil
 }
 
-func uploadFilesInDirectory(httpClient *rest.Client, sourcePath string, destDir string, partSize int64, numWorkers int) error {
+func uploadFilesInDirectory(httpClient *rest.Client, sourcePath string, destDir string, partSize int64, numWorkers int, channelID int64) error {
 	entries, err := os.ReadDir(sourcePath)
 	if err != nil {
 		return err
@@ -351,12 +354,12 @@ func uploadFilesInDirectory(httpClient *rest.Client, sourcePath string, destDir 
 			if err != nil {
 				return err
 			}
-			err = uploadFilesInDirectory(httpClient, fullPath, subDir, partSize, numWorkers)
+			err = uploadFilesInDirectory(httpClient, fullPath, subDir, partSize, numWorkers, channelID) // Pass the channel ID
 			if err != nil {
 				return err
 			}
 		} else {
-			err := uploadFile(httpClient, fullPath, strings.ReplaceAll(destDir, "\\", "/"), partSize, numWorkers)
+			err := uploadFile(httpClient, fullPath, strings.ReplaceAll(destDir, "\\", "/"), partSize, numWorkers, channelID) // Pass the channel ID
 			if err != nil {
 				return err
 			}
@@ -368,10 +371,12 @@ func uploadFilesInDirectory(httpClient *rest.Client, sourcePath string, destDir 
 func main() {
 	sourcePath := flag.String("path", "", "File or directory path to upload")
 	destDir := flag.String("dest", "", "Remote directory for uploaded files")
+	channelID := flag.Int64("channelID", 0, "Telegram channel ID") // Use a pointer to int64
+
 	flag.Parse()
 
-	if *sourcePath == "" || *destDir == "" {
-		fmt.Println("Usage: ./uploader -path <file_or_directory_path> -dest <remote_directory>")
+	if *sourcePath == "" || *destDir == "" || *channelID == 0 { // Check if channelID is provided
+		fmt.Println("Usage: ./uploader -path <file_or_directory_path> -dest <remote_directory> -channelID <telegram_channel_id>")
 		return
 	}
 
@@ -398,12 +403,13 @@ func main() {
 
 	if fileInfo, err := os.Stat(*sourcePath); err == nil {
 		if fileInfo.IsDir() {
-			err := uploadFilesInDirectory(httpClient, *sourcePath, *destDir, config.PartSize, config.Workers)
+			err := uploadFilesInDirectory(httpClient, *sourcePath, *destDir, config.PartSize, config.Workers, *channelID) // Pass the channel ID
 			if err != nil {
 				fmt.Println("Error uploading files:", err)
 			}
 		} else {
-			if err := uploadFile(httpClient, *sourcePath, *destDir, config.PartSize, config.Workers); err != nil {
+			if err := uploadFile(httpClient, *sourcePath, *destDir, config.PartSize, config.Workers, *channelID); // Pass the channel ID
+				err != nil {
 				fmt.Println("Error uploading file:", err)
 			}
 		}
