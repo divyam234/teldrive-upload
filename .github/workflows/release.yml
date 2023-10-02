@@ -1,9 +1,9 @@
-name: Build and Release
+name: Goreleaser
 
 on:
   push:
-    branches:
-      - 'main'
+    tags:
+      - "*"
 
 permissions:
   contents: write
@@ -12,34 +12,14 @@ jobs:
   goreleaser:
     runs-on: ubuntu-latest
     steps:
-
-      - name: Configure Git
-        run: |
-          git config --global user.email "hackmonker127001@protonmail.com"
-          git config --global user.name "hackmonker"      
-
       - name: Checkout
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-          
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
           go-version: 1.21
-
-      - name: Create Tag
-        id: tag
-        run: |
-          # See https://docs.github.com/en/get-started/using-git/dealing-with-special-characters-in-branch-and-tag-names
-          TAG=v$(date -Iseconds | sed 's/[T:\+]/-/g')
-          echo "$TAG"
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-          git tag -a $TAG -m "Published version $TAG" ${GITHUB_SHA}
-          git push origin $TAG
-        env:
-            GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v4
         with:
@@ -47,4 +27,4 @@ jobs:
           version: latest
           args: release --clean
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
