@@ -456,7 +456,9 @@ func (u *Uploader) uploadFilesInDirectory(sourcePath string, destDir string) err
 				Error.Fatalln(err)
 			}
 			err = u.uploadFilesInDirectory(fullPath, subDir)
-			Error.Println(err)
+			if err != nil {
+				Error.Println(err)
+			}
 		} else {
 
 			exists := u.checkFileExists(entry.Name(), files)
