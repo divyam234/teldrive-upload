@@ -4,6 +4,8 @@ go 1.21
 
 require github.com/schollz/progressbar/v3 v3.13.1
 
+require github.com/gofrs/uuid v4.4.0+incompatible // indirect
+
 require (
 	github.com/jzelinskie/whirlpool v0.0.0-20201016144138-0675e54bb004 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0

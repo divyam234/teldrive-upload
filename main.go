@@ -20,6 +20,7 @@ import (
 
 	"flag"
 
+	"github.com/gofrs/uuid"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/rclone/rclone/fs"
 	"github.com/rclone/rclone/fs/fserrors"
@@ -39,11 +40,12 @@ var Error = log.New(os.Stdout, "\u001b[31mERROR: \u001b[0m", log.LstdFlags|log.L
 var Debug = log.New(os.Stdout, "\u001b[36mDEBUG: \u001B[0m", log.LstdFlags|log.Lshortfile)
 
 type Config struct {
-	ApiURL       string        `envconfig:"API_URL" required:"true"`
-	SessionToken string        `envconfig:"SESSION_TOKEN" required:"true"`
-	PartSize     fs.SizeSuffix `envconfig:"PART_SIZE"`
-	Workers      int           `envconfig:"WORKERS" default:"4"`
-	ChannelID    int64         `envconfig:"CHANNEL_ID"`
+	ApiURL        string        `envconfig:"API_URL" required:"true"`
+	SessionToken  string        `envconfig:"SESSION_TOKEN" required:"true"`
+	PartSize      fs.SizeSuffix `envconfig:"PART_SIZE"`
+	Workers       int           `envconfig:"WORKERS" default:"4"`
+	RandomisePart bool          `envconfig:"RANDOMISE_PART" default:"true"`
+	ChannelID     int64         `envconfig:"CHANNEL_ID"`
 }
 
 type UploadPartOut struct {
@@ -153,7 +155,7 @@ func (pr *ProgressReader) Read(p []byte) (n int, err error) {
 	return
 }
 
-func (u *Uploader) uploadFile(filePath string, destDir string) error {
+func (u *Uploader) uploadFile(filePath string, destDir string, randomisePart bool) error {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return err
@@ -163,7 +165,7 @@ func (u *Uploader) uploadFile(filePath string, destDir string) error {
 	buffer := make([]byte, 512)
 	_, err = file.Read(buffer)
 	if err != nil {
-		Error.Println("Error reading file:", err)
+		Error.Println("Error reading file:", filePath, err)
 		return nil
 	}
 
@@ -245,7 +247,10 @@ func (u *Uploader) uploadFile(filePath string, destDir string) error {
 
 			name := fileName
 
-			if numParts > 1 {
+			if randomisePart {
+				u1, _ := uuid.NewV4()
+				name = hex.EncodeToString(u1.Bytes())
+			} else if numParts > 1 {
 				name = fmt.Sprintf("%s.part.%03d", fileName, partNumber+1)
 			}
 
@@ -431,7 +436,7 @@ func (u *Uploader) checkFileExists(name string, files []FileInfo) bool {
 	return false
 }
 
-func (u *Uploader) uploadFilesInDirectory(sourcePath string, destDir string) error {
+func (u *Uploader) uploadFilesInDirectory(sourcePath string, destDir string, randomisePart bool) error {
 	entries, err := os.ReadDir(sourcePath)
 	if err != nil {
 		return err
@@ -455,7 +460,7 @@ func (u *Uploader) uploadFilesInDirectory(sourcePath string, destDir string) err
 			if err != nil {
 				Error.Fatalln(err)
 			}
-			err = u.uploadFilesInDirectory(fullPath, subDir)
+			err = u.uploadFilesInDirectory(fullPath, subDir, randomisePart)
 			if err != nil {
 				Error.Println(err)
 			}
@@ -463,7 +468,7 @@ func (u *Uploader) uploadFilesInDirectory(sourcePath string, destDir string) err
 
 			exists := u.checkFileExists(entry.Name(), files)
 			if !exists {
-				err := u.uploadFile(fullPath, destDir)
+				err := u.uploadFile(fullPath, destDir, randomisePart)
 				if err != nil {
 					Error.Println("upload failed:", entry.Name(), err)
 				}
@@ -520,12 +525,12 @@ func main() {
 
 	if fileInfo, err := os.Stat(*sourcePath); err == nil {
 		if fileInfo.IsDir() {
-			err := uploader.uploadFilesInDirectory(*sourcePath, *destDir)
+			err := uploader.uploadFilesInDirectory(*sourcePath, *destDir, config.RandomisePart)
 			if err != nil {
 				Error.Println("upload failed:", err)
 			}
 		} else {
-			if err := uploader.uploadFile(*sourcePath, *destDir); err != nil {
+			if err := uploader.uploadFile(*sourcePath, *destDir, config.RandomisePart); err != nil {
 				Error.Println("upload failed:", err)
 			}
 		}
